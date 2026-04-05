@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Dialer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f5f5f3;
+      --color-background-tertiary: #ebebea;
+      --color-text-primary: #1a1a1a;
+      --color-text-secondary: #6b6b6b;
+      --color-border-tertiary: rgba(0,0,0,0.12);
+      --color-border-secondary: rgba(0,0,0,0.25);
+      --border-radius-md: 8px;
+      --border-radius-lg: 12px;
+      --font-sans: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-background-primary: #1c1c1e;
+        --color-background-secondary: #2c2c2e;
+        --color-background-tertiary: #3a3a3c;
+        --color-text-primary: #f2f2f7;
+        --color-text-secondary: #aeaeb2;
+        --color-border-tertiary: rgba(255,255,255,0.1);
+        --color-border-secondary: rgba(255,255,255,0.22);
+      }
+    }
+
+    body {
+      background: var(--color-background-primary);
+      font-family: var(--font-sans);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    #app {
+      font-family: var(--font-sans);
+      min-height: 700px;
+      background: var(--color-background-primary);
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 400px;
+      padding: 0 0 2rem;
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 0.5px solid var(--color-border-tertiary);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 14px 0;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-align: center;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      font-family: var(--font-sans);
+    }
+
+    .tab.active {
+      color: var(--color-text-primary);
+      border-bottom-color: var(--color-text-primary);
+    }
+
+    .screen { display: none; padding: 1.5rem 1.25rem; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+    .display {
+      width: 100%;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .contact-name-hint {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.04em;
+      min-height: 20px;
+      margin-bottom: 4px;
+    }
+
+    .number-display {
+      font-family: var(--font-mono);
+      font-size: 42px;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      color: var(--color-text-primary);
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      text-align: center;
+      word-break: break-all;
+    }
+
+    .number-display.shrink { font-size: 28px; }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      margin: 0.5rem 0;
+    }
+
+    .key {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 0.5px solid var(--color-border-tertiary);
+      background: var(--color-background-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.08s, transform 0.08s;
+      user-select: none;
+    }
+
+    .key:active { background: var(--color-background-tertiary); transform: scale(0.94); }
+
+    .key-num {
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      line-height: 1;
+      font-family: var(--font-sans);
+    }
+
+    .key-alpha {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--color-text-secondary);
+      margin-top: 2px;
+    }
+
+    .key.action-key { background: none; border-color: transparent; }
+
+    .key.call-key {
+      background: #1D9E75;
+      border-color: #1D9E75;
+    }
+
+    .key.call-key:active { background: #0F6E56; }
+    .key.call-key .key-num { color: #fff; font-size: 24px; }
+
+    .key.delete-key { background: none; border-color: transparent; }
+    .key.delete-key .key-num { font-size: 20px; color: var(--color-text-secondary); }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      margin-top: 4px;
+    }
+
+    .contacts-list { width: 100%; }
+
+    .contacts-header {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      padding: 1rem 0 0.5rem;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 0.5px solid var(--color-border-tertiary);
+      cursor: pointer;
+      transition: opacity 0.12s;
+    }
+
+    .contact-item:last-child { border-bottom: none; }
+    .contact-item:active { opacity: 0.6; }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .contact-info { flex: 1; }
+
+    .contact-info-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .contact-info-number {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .call-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #E1F5EE;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.1s, transform 0.1s;
+    }
+
+    .call-btn:active { background: #9FE1CB; transform: scale(0.9); }
+
+    .dial-toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-text-primary);
+      color: var(--color-background-primary);
+      padding: 10px 20px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      z-index: 10;
+      font-family: var(--font-sans);
+    }
+
+    .dial-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('keypad', this)">keypad</button>
+    <button class="tab" onclick="switchTab('contacts', this)">contacts</button>
+  </div>
+
+  <div class="screen active" id="screen-keypad">
+    <div class="display">
+      <div class="contact-name-hint" id="name-hint"></div>
+      <div class="number-display" id="number-display">
+        <span style="color:var(--color-border-secondary);font-size:14px;letter-spacing:0.1em;font-weight:500">enter number</span>
+      </div>
+    </div>
+
+    <div class="keypad">
+      <div class="key" onclick="pressKey('1')"><span class="key-num">1</span><span class="key-alpha"></span></div>
+      <div class="key" onclick="pressKey('2')"><span class="key-num">2</span><span class="key-alpha">ABC</span></div>
+      <div class="key" onclick="pressKey('3')"><span class="key-num">3</span><span class="key-alpha">DEF</span></div>
+      <div class="key" onclick="pressKey('4')"><span class="key-num">4</span><span class="key-alpha">GHI</span></div>
+      <div class="key" onclick="pressKey('5')"><span class="key-num">5</span><span class="key-alpha">JKL</span></div>
+      <div class="key" onclick="pressKey('6')"><span class="key-num">6</span><span class="key-alpha">MNO</span></div>
+      <div class="key" onclick="pressKey('7')"><span class="key-num">7</span><span class="key-alpha">PQRS</span></div>
+      <div class="key" onclick="pressKey('8')"><span class="key-num">8</span><span class="key-alpha">TUV</span></div>
+      <div class="key" onclick="pressKey('9')"><span class="key-num">9</span><span class="key-alpha">WXYZ</span></div>
+      <div class="key action-key" onclick="pressKey('*')"><span class="key-num" style="font-size:22px">*</span></div>
+      <div class="key" onclick="pressKey('0')"><span class="key-num">0</span><span class="key-alpha">+</span></div>
+      <div class="key action-key" onclick="pressKey('#')"><span class="key-num" style="font-size:22px">#</span></div>
+    </div>
+
+    <div class="action-row">
+      <div class="key action-key"></div>
+      <div class="key call-key" onclick="dial()"><span class="key-num">&#9742;</span></div>
+      <div class="key delete-key" onclick="deleteLast()"><span class="key-num">&#9003;</span></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-contacts">
+    <div class="contacts-list" id="contacts-list"></div>
+  </div>
+</div>
+
+<div class="dial-toast" id="toast"></div>
+
+<script>
+  const contacts = [
+    { name: 'Ana García', number: '+52 55 1234 5678', color: ['#EEEDFE','#534AB7'] },
+    { name: 'Carlos Mendoza', number: '+52 55 8765 4321', color: ['#E1F5EE','#0F6E56'] },
+    { name: 'Diana López', number: '+1 415 555 0172', color: ['#FAECE7','#993C1D'] },
+    { name: 'Erik Torres', number: '+52 33 2345 6789', color: ['#FAEEDA','#854F0B'] },
+    { name: 'Fernanda Ruiz', number: '+52 81 3456 7890', color: ['#FBEAF0','#993556'] },
+    { name: 'Gonzalo Vera', number: '+1 212 555 0199', color: ['#E6F1FB','#185FA5'] },
+    { name: 'Helena Cruz', number: '+52 55 9876 5432', color: ['#EAF3DE','#3B6D11'] },
+  ];
+
+  let typed = '';
+
+  function initials(name) {
+    return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+  }
+
+  function renderContacts() {
+    const list = document.getElementById('contacts-list');
+    list.innerHTML = '<div class="contacts-header">all contacts</div>';
+    contacts.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'contact-item';
+      item.innerHTML = `
+        <div class="avatar" style="background:${c.color[0]};color:${c.color[1]}">${initials(c.name)}</div>
+        <div class="contact-info">
+          <div class="contact-info-name">${c.name}</div>
+          <div class="contact-info-number">${c.number}</div>
+        </div>
+        <button class="call-btn" title="Call">&#9742;</button>
+      `;
+      item.querySelector('.call-btn').onclick = (e) => { e.stopPropagation(); callContact(c); };
+      item.onclick = () => dialContact(c);
+      list.appendChild(item);
+    });
+  }
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-' + tab).classList.add('active');
+  }
+
+  function formatDisplay(num) {
+    const digits = num.replace(/\D/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return digits.slice(0,3) + ' ' + digits.slice(3);
+    if (digits.length <= 10) return digits.slice(0,3) + ' ' + digits.slice(3,6) + ' ' + digits.slice(6);
+    return digits.slice(0,2) + ' ' + digits.slice(2,4) + ' ' + digits.slice(4,8) + ' ' + digits.slice(8,12);
+  }
+
+  function updateDisplay() {
+    const el = document.getElementById('number-display');
+    const hint = document.getElementById('name-hint');
+    if (!typed) {
+      el.innerHTML = '<span style="color:var(--color-border-secondary);font-size:14px;letter-spacing:0.1em;font-weight:500">enter number</span>';
+      el.classList.remove('shrink');
+      hint.textContent = '';
+      return;
+    }
+    const matched = contacts.find(c => c.number.replace(/\D/g,'') === typed.replace(/\D/g,''));
+    hint.textContent = matched ? matched.name : '';
+    el.textContent = formatDisplay(typed);
+    el.classList.toggle('shrink', typed.length > 10);
+  }
+
+  function pressKey(k) {
+    if (typed.length >= 15) return;
+    typed += k;
+    updateDisplay();
+  }
+
+  function deleteLast() {
+    typed = typed.slice(0, -1);
+    updateDisplay();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function dial() {
+    if (!typed) return;
+    const matched = contacts.find(c => c.number.replace(/\D/g,'') === typed.replace(/\D/g,''));
+    showToast('Calling ' + (matched ? matched.name : typed) + '...');
+  }
+
+  function callContact(c) {
+    showToast('Calling ' + c.name + '...');
+  }
+
+  function dialContact(c) {
+    typed = c.number.replace(/\D/g,'');
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-keypad').classList.add('active');
+    updateDisplay();
+  }
+
+  renderContacts();
+</script>
+</body>
+</html>
